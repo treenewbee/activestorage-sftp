@@ -1,3 +1,5 @@
+[![Gem Version](https://badge.fury.io/rb/activestorage-sftp.svg)](https://badge.fury.io/rb/activestorage-sftp)
+
 Remote DiskService through SFTP, for ActiveStorage. 
 
 ## Installation
