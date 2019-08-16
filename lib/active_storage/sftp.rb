@@ -4,6 +4,7 @@ require "active_storage/service/sftp_service"
 module ActiveStorage
   module SFTP
     class Error < StandardError; end
-    # Your code goes here...
+    class ChunkSizeError < Error; end
+    class SFTPResponseError < Error; end
   end
 end

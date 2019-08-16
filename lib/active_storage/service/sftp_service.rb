@@ -9,13 +9,14 @@ module ActiveStorage
 
     MAX_CHUNK_SIZE = 64.kilobytes.freeze
 
-    attr_reader :host, :user, :root, :public_host
+    attr_reader :host, :user, :root, :public_host, :public_root
 
-    def initialize(host:, user:, public_host: nil, root: './')
+    def initialize(host:, user:, public_host: nil, root: './', public_root: nil)
       @host = host
       @user = user
       @root = root
       @public_host = public_host
+      @public_root = public_root
     end
 
     def upload(key, io, checksum: nil, **)
@@ -30,8 +31,7 @@ module ActiveStorage
 
     def download(key, chunk_size: MAX_CHUNK_SIZE, &block)
       if chunk_size > MAX_CHUNK_SIZE
-        # TODO Error
-        raise "Maximum chunk size: #{MAX_CHUNK_SIZE}"
+        raise ChunkSizeError, "Maximum chunk size: #{MAX_CHUNK_SIZE}"
       end
       if block_given?
         instrument :streaming_download, key: key do
@@ -45,8 +45,7 @@ module ActiveStorage
                 if response.eof?
                   eof = true
                 elsif !response.ok?
-                  # TODO Error
-                  raise "SFTP Response Error"
+                  raise SFTPResponseError, response.code
                 else
                   chunk = response[:data]
                   block.call(chunk)
@@ -76,8 +75,7 @@ module ActiveStorage
     def download_chunk(key, range)
       instrument :download_chunk, key: key, range: range do
         if range.size > MAX_CHUNK_SIZE
-          # TODO Error
-          raise "Maximun chunk size: #{MAX_CHUNK_SIZE}"
+          raise ChunkSizeError, "Maximum chunk size: #{MAX_CHUNK_SIZE}"
         end
         chunk = StringIo.new
         through_sftp do |sftp|
@@ -179,15 +177,15 @@ module ActiveStorage
       { "Content-Type" => content_type }
     end
 
+    def path_for(key)
+      File.join folder_for(key), key
+    end
+
     protected
       def through_sftp(&block)
         Net::SFTP.start(@host, @user) do |sftp|
           block.call(sftp)
         end
-      end
-
-      def path_for(key)
-        File.join folder_for(key), key
       end
 
       def folder_for(key)
