@@ -117,9 +117,16 @@ module ActiveStorage
       instrument :exist, key: key do |payload|
         answer = false
         through_sftp do |sftp|
-          # TODO Probably adviseable to let some exceptions go through
-          answer = sftp.stat(path_for(key))&.response&.ok?
+          # TODO Probably adviseable to let some more exceptions go through
+          begin
+            sftp.stat!(path_for(key)) do |response|
+              answer == response.ok?
+            end
+          rescue Net::SFTP::StatusException => e
+            answer = false
+          end
         end
+
         payload[:exist] = answer
         answer
       end
