@@ -20,8 +20,8 @@ Or install it yourself as:
 
 ## Usage
 
-
 Each application server saves blobs to file server through SFTP:
+
 ```yml
 # config/storage.yml
 sftp:
@@ -30,7 +30,9 @@ sftp:
   root: /var/www/proj/shared/storage
   host: file.intranet
   public_host: https://file.internet
+  password: <%= ENV['PASSWORD'] %> # optional
 ```
+
 File server serves blobs using DiskService:
 ```yml
 # config/storage.yml
