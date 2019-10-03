@@ -11,7 +11,7 @@ module ActiveStorage
 
     attr_reader :host, :user, :root, :public_host, :public_root
 
-    def initialize(host:, user:, public_host: nil, root: './', public_root: nil)
+    def initialize(host:, user:, public_host: nil, root: './', public_root: './')
       @host = host
       @user = user
       @root = root
@@ -124,9 +124,18 @@ module ActiveStorage
       end
     end
 
+    def public_url(key)
+      instrument :url, key: key do |payload|
+        raise NotConfigured, "public_host not defined." unless public_host
+        generated_url = File.join(public_host, public_root, path_for(key), key)
+        payload[:url] = generated_url
+        generated_url
+      end
+    end
+
     def url(key, expires_in:, filename:, disposition:, content_type:)
         instrument :url, key: key do |payload|
-          raise "public_host not defined." unless public_host
+          raise NotConfigured, "public_host not defined." unless public_host
           content_disposition = content_disposition_with(type: disposition, filename: filename)
           verified_key_with_expiration = ActiveStorage.verifier.generate(
               {
