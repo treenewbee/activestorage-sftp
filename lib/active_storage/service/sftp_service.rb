@@ -117,8 +117,16 @@ module ActiveStorage
       instrument :exist, key: key do |payload|
         answer = false
         through_sftp do |sftp|
-          answer = sftp.stat(path_for(key)).present?
+          # TODO Probably adviseable to let some more exceptions go through
+          begin
+            sftp.stat!(path_for(key)) do |response|
+              answer = response.ok?
+            end
+          rescue Net::SFTP::StatusException => e
+            answer = false
+          end
         end
+
         payload[:exist] = answer
         answer
       end
@@ -206,18 +214,20 @@ module ActiveStorage
       end
 
       def mkdir_for(key)
+        mkdir_p_for(path_for key)
+      end
+
+      def mkdir_p_for(abs_path)
         through_sftp do |sftp|
-          sub_folder = File.join root, key[0..1]
-          begin
-            sftp.opendir!(sub_folder)
-          rescue => e
-            sftp.mkdir!(sub_folder)
-          end
-          sub_folder = File.join(sub_folder, key[2..3])
-          begin
-            sftp.opendir!(sub_folder)
-          rescue => e
-            sftp.mkdir!(sub_folder)
+          base_path = ''
+          abs_path.split('/')[0...-1].each do |path|
+            sub_folder = File.join(base_path, path)
+            begin
+              sftp.opendir!(sub_folder)
+            rescue => e
+              sftp.mkdir!(sub_folder)
+            end
+            base_path = sub_folder
           end
         end
       end
