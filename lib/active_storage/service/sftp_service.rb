@@ -11,7 +11,7 @@ module ActiveStorage
 
     attr_reader :host, :user, :root, :public_host, :public_root
 
-    def initialize(host:, user:, public_host: nil, root: './', public_root: nil, password: nil)
+    def initialize(host:, user:, public_host: nil, root: './', public_root: './', password: nil)
       @host = host
       @user = user
       @root = root
@@ -118,16 +118,33 @@ module ActiveStorage
       instrument :exist, key: key do |payload|
         answer = false
         through_sftp do |sftp|
-          answer = sftp.stat(path_for(key)).present?
+          # TODO Probably adviseable to let some more exceptions go through
+          begin
+            sftp.stat!(path_for(key)) do |response|
+              answer = response.ok?
+            end
+          rescue Net::SFTP::StatusException => e
+            answer = false
+          end
         end
+
         payload[:exist] = answer
         answer
       end
     end
 
+    def public_url(key)
+      instrument :url, key: key do |payload|
+        raise NotConfigured, "public_host not defined." unless public_host
+        generated_url = File.join(public_host, public_root, path_for(key), key)
+        payload[:url] = generated_url
+        generated_url
+      end
+    end
+
     def url(key, expires_in:, filename:, disposition:, content_type:)
         instrument :url, key: key do |payload|
-          raise "public_host not defined." unless public_host
+          raise NotConfigured, "public_host not defined." unless public_host
           content_disposition = content_disposition_with(type: disposition, filename: filename)
           verified_key_with_expiration = ActiveStorage.verifier.generate(
               {
@@ -199,18 +216,20 @@ module ActiveStorage
       end
 
       def mkdir_for(key)
+        mkdir_p_for(path_for key)
+      end
+
+      def mkdir_p_for(abs_path)
         through_sftp do |sftp|
-          sub_folder = File.join root, key[0..1]
-          begin
-            sftp.opendir!(sub_folder)
-          rescue => e
-            sftp.mkdir!(sub_folder)
-          end
-          sub_folder = File.join(sub_folder, key[2..3])
-          begin
-            sftp.opendir!(sub_folder)
-          rescue => e
-            sftp.mkdir!(sub_folder)
+          base_path = ''
+          abs_path.split('/')[0...-1].each do |path|
+            sub_folder = File.join(base_path, path)
+            begin
+              sftp.opendir!(sub_folder)
+            rescue => e
+              sftp.mkdir!(sub_folder)
+            end
+            base_path = sub_folder
           end
         end
       end

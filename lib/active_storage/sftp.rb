@@ -6,5 +6,8 @@ module ActiveStorage
     class Error < StandardError; end
     class ChunkSizeError < Error; end
     class SFTPResponseError < Error; end
+    class NotConfigured < Error; end
   end
 end
+
+
