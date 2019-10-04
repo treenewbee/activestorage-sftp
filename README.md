@@ -56,6 +56,21 @@ sftp:
   host: secure.backup
 ```
 
+### Further configuration options
+
+#### verify_via_http_get: Faster existence verification via HTTP GET
+
+The default way of verifying that a blob does exist is to login to the sftp server and stat() the relevant file.  This is done e.g. before re-transforming and uploading an image variant.  While other "caching" solutions exist to speed up that process, a simple and efficient way of verifying the existence of a file is to query the relevant server with an HTTP HEAD request.  Depending on the setup this might not always be a viable way, so it can be switched on with a configuration option.
+
+```yml
+sftp:
+  service: SFTP
+  user: user
+  root: /var/www/proj/shared/storage
+  host: file.intranet
+  public_host: https://file.internet
+  verify_via_http_get: true # defaults to false
+```
 
 ## Contributing
 
