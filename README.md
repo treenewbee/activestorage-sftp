@@ -56,7 +56,9 @@ sftp:
   host: secure.backup
 ```
 
-### use_public_url: Generate plain ("dumb") URLs of upload server
+### Further configuration options:
+
+#### use_public_url: Generate plain ("dumb") URLs of upload server
 
 By default the generated URLs will include parameters for `content_disposition`, expiration hints etc.  A generated blobs URL might thus look like:
 
@@ -70,15 +72,18 @@ you can set a configuration option:
 
 ```yml
 # config/storage.yml
-sftp:
-  service: SFTP
-  user: user
-  root: /var/www/proj/shared/storage
-  host: file.intranet
-  public_host: https://file.internet
-  simple_public_urls: true
+simple_public_urls: true
 ```
 
+
+#### verify_via_http_get: Faster existence verification via HTTP GET
+
+The default way of verifying that a blob does exist is to login to the sftp server and stat() the relevant file.  This is done e.g. before re-transforming and uploading an image variant.  While other "caching" solutions exist to speed up that process, a simple and efficient way of verifying the existence of a file is to query the relevant server with an HTTP HEAD request.  Depending on the setup this might not always be a viable way, so it can be switched on with a configuration option.
+
+```yml
+# config/storage.yml
+  verify_via_http_get: true # defaults to false
+```
 
 ## Contributing
 
