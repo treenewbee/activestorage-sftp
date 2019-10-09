@@ -11,13 +11,14 @@ module ActiveStorage
 
     attr_reader :host, :user, :root, :public_host, :public_root
 
-    def initialize(host:, user:, public_host: nil, root: './', public_root: './', password: nil)
+    def initialize(host:, user:, public_host: nil, root: './', public_root: './', password: nil, verify_via_http_get: false)
       @host = host
       @user = user
       @root = root
       @public_host = public_host
       @public_root = public_root
       @password = password
+      @verify_via_http_get = verify_via_http_get
     end
 
     def upload(key, io, checksum: nil, **)
@@ -117,14 +118,23 @@ module ActiveStorage
     def exist?(key)
       instrument :exist, key: key do |payload|
         answer = false
-        through_sftp do |sftp|
-          # TODO Probably adviseable to let some more exceptions go through
-          begin
-            sftp.stat!(path_for(key)) do |response|
-              answer = response.ok?
+
+        if @verify_via_http_get
+          uri = URI([public_host, relative_folder_for(key), key].join('/'))
+          request = Net::HTTP.new uri.host
+          response = request.request_head uri.path
+
+          answer = (response.code.to_i == 200)
+        else
+          through_sftp do |sftp|
+            # TODO Probably adviseable to let some more exceptions go through
+            begin
+              sftp.stat!(path_for(key)) do |response|
+                answer = response.ok?
+              end
+            rescue Net::SFTP::StatusException => e
+              answer = false
             end
-          rescue Net::SFTP::StatusException => e
-            answer = false
           end
         end
 
