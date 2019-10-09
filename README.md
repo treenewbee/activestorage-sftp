@@ -72,7 +72,8 @@ you can set a configuration option:
 
 ```yml
 # config/storage.yml
-simple_public_urls: true
+sftp:
+  simple_public_urls: true
 ```
 
 
@@ -82,6 +83,7 @@ The default way of verifying that a blob does exist is to login to the sftp serv
 
 ```yml
 # config/storage.yml
+sftp:
   verify_via_http_get: true # defaults to false
 ```
 
