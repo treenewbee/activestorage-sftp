@@ -73,7 +73,7 @@ you can set a configuration option:
 ```yml
 # config/storage.yml
 sftp:
-  simple_public_urls: true
+  simple_public_urls: true # defaults to false
 ```
 
 
