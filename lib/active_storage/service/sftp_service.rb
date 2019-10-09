@@ -11,13 +11,14 @@ module ActiveStorage
 
     attr_reader :host, :user, :root, :public_host, :public_root
 
-    def initialize(host:, user:, public_host: nil, root: './', public_root: './', password: nil, verify_via_http_get: false)
+    def initialize(host:, user:, public_host: nil, root: './', public_root: './', password: nil, simple_public_urls: false, verify_via_http_get: false)
       @host = host
       @user = user
       @root = root
       @public_host = public_host
       @public_root = public_root
       @password = password
+      @simple_public_urls = simple_public_urls
       @verify_via_http_get = verify_via_http_get
     end
 
@@ -143,38 +144,51 @@ module ActiveStorage
       end
     end
 
+    def url(key, expires_in:, filename:, disposition:, content_type:)
+      if @simple_public_urls
+        public_url(key)
+      else
+        classic_url(key,
+                    expires_in: expires_in,
+                    filename: filename,
+                    disposition: disposition,
+                    content_type: content_type)
+      end
+    end
+
+    def classic_url(key, expires_in:, filename:, disposition:, content_type:)
+      instrument :url, key: key do |payload|
+        raise NotConfigured, "public_host not defined." unless public_host
+        content_disposition = content_disposition_with(type: disposition, filename: filename)
+        verified_key_with_expiration = ActiveStorage.verifier.generate(
+          {
+            key: key,
+            disposition: content_disposition,
+            content_type: content_type
+          },
+          {
+            expires_in: expires_in,
+            purpose: :blob_key
+          }
+        )
+
+        generated_url = url_helpers.rails_disk_service_url(verified_key_with_expiration,
+                                                           host: public_host,
+                                                           disposition: content_disposition,
+                                                           content_type: content_type,
+                                                           filename: filename
+        )
+        payload[:url] = generated_url
+        generated_url
+      end
+    end
+
     def public_url(key)
       instrument :url, key: key do |payload|
         raise NotConfigured, "public_host not defined." unless public_host
         generated_url = File.join(public_host, public_root, path_for(key), key)
         payload[:url] = generated_url
         generated_url
-      end
-    end
-
-    def url(key, expires_in:, filename:, disposition:, content_type:)
-        instrument :url, key: key do |payload|
-          raise NotConfigured, "public_host not defined." unless public_host
-          content_disposition = content_disposition_with(type: disposition, filename: filename)
-          verified_key_with_expiration = ActiveStorage.verifier.generate(
-              {
-                  key: key,
-                  disposition: content_disposition,
-                  content_type: content_type
-              },
-              { expires_in: expires_in,
-                purpose: :blob_key }
-          )
-
-          generated_url = url_helpers.rails_disk_service_url(verified_key_with_expiration,
-                                                             host: public_host,
-                                                             disposition: content_disposition,
-                                                             content_type: content_type,
-                                                             filename: filename
-          )
-          payload[:url] = generated_url
-
-          generated_url
       end
     end
 
