@@ -206,7 +206,7 @@ module ActiveStorage
         )
 
         generated_url = url_helpers.update_rails_disk_service_url(verified_token_with_expiration,
-                                                                  host: public_host
+                                                                  host: current_host
         )
 
         payload[:url] = generated_url
@@ -267,6 +267,10 @@ module ActiveStorage
 
       def url_helpers
         @url_helpers ||= Rails.application.routes.url_helpers
+      end
+
+      def current_host
+        ActiveStorage::Current.host
       end
   end
 end
