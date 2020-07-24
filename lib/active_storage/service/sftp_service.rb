@@ -23,6 +23,14 @@ module ActiveStorage
     end
 
     def upload(key, io, checksum: nil, **)
+      # convert StringIO to Tempfile if required
+      io = Tempfile.new.tap do |file|
+        file.binmode
+        IO.copy_stream(io, file)
+        io.close
+        file.rewind
+      end unless io.respond_to?(:path)
+
       instrument :upload, key: key, checksum: checksum do
         ensure_integrity_of(io, checksum) if checksum
         mkdir_for(key)
