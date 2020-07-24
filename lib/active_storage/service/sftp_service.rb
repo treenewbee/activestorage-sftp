@@ -226,7 +226,7 @@ module ActiveStorage
     protected
       def through_sftp(&block)
         opts = @password.present? ? {password: @password} : {}
-        Net::SFTP.start(@host, @user, opts) do |sftp|
+        Net::SFTP.start(@host, @user, opts.merge(non_interactive: true)) do |sftp|
           block.call(sftp)
         end
       end
