@@ -88,7 +88,7 @@ module ActiveStorage
         if range.size > MAX_CHUNK_SIZE
           raise ChunkSizeError, "Maximum chunk size: #{MAX_CHUNK_SIZE}"
         end
-        chunk = StringIo.new
+        chunk = StringIO.new
         through_sftp do |sftp|
           sftp.open(path_for(key)) do |file|
             chunk << sftp.read(file, range.begin, ranage.size).response[:data]
