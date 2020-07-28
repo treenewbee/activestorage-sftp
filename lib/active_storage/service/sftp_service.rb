@@ -194,7 +194,7 @@ module ActiveStorage
     def public_url(key)
       instrument :url, key: key do |payload|
         raise NotConfigured, "public_host not defined." unless public_host
-        generated_url = File.join(public_host, public_root, path_for(key))
+        generated_url = File.join(public_host, public_root, relative_folder_for(key), key)
         payload[:url] = generated_url
         generated_url
       end
