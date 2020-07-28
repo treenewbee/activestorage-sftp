@@ -23,6 +23,14 @@ module ActiveStorage
     end
 
     def upload(key, io, checksum: nil, **)
+      # convert StringIO to Tempfile if required
+      io = Tempfile.new.tap do |file|
+        file.binmode
+        IO.copy_stream(io, file)
+        io.close
+        file.rewind
+      end unless io.respond_to?(:path)
+
       instrument :upload, key: key, checksum: checksum do
         ensure_integrity_of(io, checksum) if checksum
         mkdir_for(key)
@@ -80,10 +88,10 @@ module ActiveStorage
         if range.size > MAX_CHUNK_SIZE
           raise ChunkSizeError, "Maximum chunk size: #{MAX_CHUNK_SIZE}"
         end
-        chunk = StringIo.new
+        chunk = StringIO.new
         through_sftp do |sftp|
           sftp.open(path_for(key)) do |file|
-            chunk << sftp.read(file, range.begin, ranage.size).response[:data]
+            chunk << sftp.read(file, range.begin, range.size).response&.[](:data)
           end
         end
         chunk.string
